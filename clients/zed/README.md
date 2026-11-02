@@ -26,7 +26,9 @@ Settings example:
         "diagnostics": { "maxProblems": 500 }
       }
     }
-  }
+  },
+  // Zed skips language servers for buffers with lines longer than this (default 20000).
+  "global_lsp_settings": { "max_buffer_line_length": 100000000 }
 }
 ```
 
@@ -46,7 +48,10 @@ a commit that contains the generated `src/parser.c` files.
 3. In Zed run `zed: install dev extension` and pick this `clients/zed/` directory. If the
    registry extension "IFC" (id `ifc`, a different project) is installed, uninstall it first:
    both claim `.ifc` files and the language name IFC.
-4. Open an `.ifc` file. The Zed log (`zed: open log`) shows the server start-up.
+4. Raise `global_lsp_settings.max_buffer_line_length` (default 20 000). Zed does not attach
+   language servers to a buffer whose longest line exceeds it, and only says so at debug log
+   level; IFC files often have lines of 50 000+ characters. See the settings example above.
+5. Open an `.ifc` file. The Zed log (`zed: open log`) shows the server start-up.
 
 After changing a grammar, run `npx tree-sitter-cli generate` in its directory, commit, and
 update `rev`. Query files (`highlights.scm`, `brackets.scm`, `outline.scm`) live in

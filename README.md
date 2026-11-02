@@ -45,7 +45,12 @@ Requirements: a stable Rust toolchain (<https://rustup.rs>), Node.js 24 and pnpm
    { "lsp": { "ifc-lsp": { "binary": { "path": "/path/to/ifc-lsp" } } } }
    ```
 2. In Zed run `zed: install dev extension` and choose the `clients/zed/` folder.
-3. Open an `.ifc` file. Server logs are under `zed: open log`.
+3. Raise Zed's line-length cut-off, otherwise it silently skips language servers for IFC
+   buffers (the default is 20 000 characters and IFC lines are often far longer):
+   ```json
+   { "global_lsp_settings": { "max_buffer_line_length": 100000000 } }
+   ```
+4. Open an `.ifc` file. Server logs are under `zed: open log`.
 
 More detail on the Zed side, including publishing, is in `clients/zed/README.md`.
 
