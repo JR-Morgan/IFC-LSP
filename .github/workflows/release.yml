@@ -2,7 +2,7 @@ name: Release
 
 # Runs only for `v*` tags. Produces, on one GitHub release:
 #   ifc-lsp-<tag>-<target>.tar.gz | .zip         server archives (the Zed extension downloads these)
-#   ifc-language-support-<version>-<vscode-target>.vsix   platform-specific VS Code packages
+#   ifc-lsp-vscode-<version>-<vscode-target>.vsix   platform-specific VS Code packages
 # and, when the repository variable PUBLISH_VSCODE_MARKETPLACE is "true", publishes the
 # .vsix files to the Visual Studio Marketplace through Trusted Publishing (OIDC).
 on:
@@ -130,7 +130,7 @@ jobs:
             cp "binaries/binary-$rust"/ifc-lsp* "server/$vscode/"
             chmod +x "server/$vscode"/ifc-lsp*
             pnpm exec vsce package --no-dependencies --target "$vscode" \
-              -o "../../dist/ifc-language-support-$version-$vscode.vsix"
+              -o "../../dist/ifc-lsp-vscode-$version-$vscode.vsix"
           done
           rm -rf server binaries
           ls -l ../../dist

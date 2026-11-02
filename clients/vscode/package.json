@@ -1,6 +1,6 @@
 {
-  "name": "ifc-language-support",
-  "displayName": "IFC Language Support",
+  "name": "ifc-lsp",
+  "displayName": "IFC LSP",
   "description": "Syntax highlighting, navigation, hover and diagnostics for IFC (ISO 10303-21 STEP) files, powered by a native language server.",
   "version": "0.1.0",
   "publisher": "JR-Morgan",

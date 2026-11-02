@@ -1,4 +1,4 @@
-# IFC Language Support
+# IFC LSP
 
 Language support for IFC files (ISO 10303-21 "STEP Part 21" text), backed by a native
 language server written in Rust. Fast enough for real models: a 74 MB file indexes in well
