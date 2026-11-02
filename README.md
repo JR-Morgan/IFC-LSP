@@ -1,0 +1,57 @@
+# IFC Language Server
+
+Language tooling for IFC files (ISO 10303-21 "STEP Part 21" text), built around a native
+language server written in Rust. Works on files of any size the editor can open.
+
+## What is in this repository
+
+| Path | Contents |
+|---|---|
+| `server/` | `ifc-lsp`, the language server. Also a small CLI (`ifc-lsp lint <file>`, `ifc-lsp index-bench <file>`). |
+| `clients/vscode/` | VS Code extension: TextMate grammars for IFC and EXPRESS plus a thin launcher for the server. |
+| `clients/zed/` | Zed extension: language definitions, Tree-sitter queries and a WASM launcher that finds or downloads the server. |
+| `grammars/` | Tree-sitter grammars for IFC and EXPRESS used by Zed. |
+| `schemas/` | Unmodified buildingSMART EXPRESS schemas embedded into the server (see `schemas/NOTICE.md`). |
+
+## Features
+
+- Syntax highlighting for IFC/STEP files and EXPRESS schemas.
+- Go to definition and find references on `#123` instance references.
+- Go to schema: F12 on an entity name, typed value or enumeration value opens its EXPRESS declaration.
+- Hover on an entity constructor shows its attributes (including inherited ones) next to the actual arguments.
+- Diagnostics for obviously invalid content: unknown or abstract entities, wrong argument counts, undefined or duplicate ids, bad enumeration values, type mismatches and syntax errors.
+- Schemas embedded: IFC2X3, IFC4, IFC4X1, IFC4X2, IFC4X3_ADD1, IFC4X3_ADD2, chosen from the file's `FILE_SCHEMA` header. Extra `.exp` files can be added through settings.
+- Fast: a 74 MB file indexes in well under a second and edits are re-indexed incrementally.
+
+VS Code never shares documents above 50 MB with extensions, so language features stop at
+that size there; Zed has no such limit.
+
+## Debugging
+
+Requirements: a stable Rust toolchain (<https://rustup.rs>), Node.js 22 and pnpm.
+
+### VS Code
+
+1. `cd clients/vscode && pnpm install`
+2. Open this folder in VS Code and press F5 ("Run Extension").
+   This builds the server and the client, then starts an Extension Development Host that
+   uses the freshly built server from `server/target`.
+3. Open an `.ifc` file. Server logs appear in the "IFC Language Server" output channel.
+
+### Zed
+
+1. `cd server && cargo build --release`, then put `target/release/ifc-lsp` on your PATH
+   or point Zed at it:
+   ```json
+   { "lsp": { "ifc-lsp": { "binary": { "path": "/path/to/ifc-lsp" } } } }
+   ```
+2. In Zed run `zed: install dev extension` and choose the `clients/zed/` folder.
+3. Open an `.ifc` file. Server logs are under `zed: open log`.
+
+More detail on the Zed side, including publishing, is in `clients/zed/README.md`.
+
+## Licence
+
+Apache-2.0, copyright 2026 Jedd Morgan. The EXPRESS schemas in `schemas/` are
+buildingSMART International's and are redistributed unmodified under their own terms; see
+`schemas/NOTICE.md`.

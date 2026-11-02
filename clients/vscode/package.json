@@ -1,0 +1,126 @@
+{
+  "name": "ifc-language-support",
+  "displayName": "IFC Language Support",
+  "description": "Syntax highlighting, navigation, hover and diagnostics for IFC (ISO 10303-21 STEP) files, powered by a native language server.",
+  "version": "0.1.0",
+  "publisher": "speckle",
+  "license": "Apache-2.0",
+  "private": true,
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "keywords": [
+    "ifc",
+    "step",
+    "bim",
+    "iso-10303",
+    "buildingsmart"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "languages": [
+      {
+        "id": "ifc",
+        "aliases": [
+          "IFC",
+          "STEP Part 21"
+        ],
+        "extensions": [
+          ".ifc",
+          ".stp",
+          ".step",
+          ".p21"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "express",
+        "aliases": [
+          "EXPRESS",
+          "ISO 10303-11"
+        ],
+        "extensions": [
+          ".exp"
+        ],
+        "configuration": "./express-language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ifc",
+        "scopeName": "source.ifc",
+        "path": "./syntaxes/ifc.tmLanguage.json"
+      },
+      {
+        "language": "express",
+        "scopeName": "source.express",
+        "path": "./syntaxes/express.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "ifc.restartServer",
+        "title": "IFC: Restart Language Server"
+      }
+    ],
+    "configuration": {
+      "title": "IFC",
+      "properties": {
+        "ifc.serverPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the ifc-lsp executable. Leave empty to use the bundled binary (or, in a development checkout, the one built in server/target)."
+        },
+        "ifc.extraSchemaDirectories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Directories containing additional EXPRESS (.exp) schema files. A file is matched to a schema by the FILE_SCHEMA header, using the SCHEMA name declared in the .exp file."
+        },
+        "ifc.diagnostics.maxProblems": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 1,
+          "description": "Maximum number of problems reported per file."
+        },
+        "ifc.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Trace the communication between VS Code and the IFC language server."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

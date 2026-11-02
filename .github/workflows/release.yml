@@ -1,0 +1,60 @@
+name: Release
+
+# Builds ifc-lsp for every supported platform and attaches the archives to a
+# GitHub release. The Zed extension downloads them by name:
+#   ifc-lsp-<tag>-<target>.tar.gz   (Linux, macOS)
+#   ifc-lsp-<tag>-<target>.zip      (Windows)
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - os: macos-13
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server
+      - run: cargo build --release --target ${{ matrix.target }}
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        run: |
+          name=ifc-lsp-${GITHUB_REF_NAME}-${{ matrix.target }}
+          tar -C target/${{ matrix.target }}/release -czf "$name.tar.gz" ifc-lsp
+          echo "ASSET=server/$name.tar.gz" >> "$GITHUB_ENV"
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $name = "ifc-lsp-$env:GITHUB_REF_NAME-${{ matrix.target }}"
+          Compress-Archive -Path "target/${{ matrix.target }}/release/ifc-lsp.exe" -DestinationPath "$name.zip"
+          "ASSET=server/$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ASSET }}
+          generate_release_notes: true

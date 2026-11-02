@@ -1,0 +1,33 @@
+# Rust
+server/target/
+clients/zed/target/
+
+# Zed extension build output and dev-install artefacts
+clients/zed/*.wasm
+clients/zed/extension.wasm
+clients/zed/grammars/
+
+# Tree-sitter local builds (src/parser.c is committed on purpose)
+grammars/*/build/
+grammars/*/node_modules/
+grammars/*/*.wasm
+grammars/*/*.dylib
+grammars/*/*.so
+grammars/*/*.dll
+
+# Node / VS Code extension
+node_modules/
+clients/vscode/dist/
+clients/vscode/out/
+clients/vscode/server/
+*.vsix
+.vscode-test/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+
+# Local-only
+.scratch/

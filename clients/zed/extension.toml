@@ -1,0 +1,25 @@
+id = "ifc"
+name = "IFC"
+version = "0.1.0"
+schema_version = 1
+authors = ["Speckle"]
+description = "IFC (ISO 10303-21 STEP) language support: syntax highlighting, go to definition, hover and diagnostics through the ifc-lsp language server."
+# Update once the repository is published; the grammar entries below point at the same repo.
+repository = "https://github.com/JR-Morgan/IFC-LSP"
+
+[language_servers.ifc-lsp]
+name = "IFC Language Server"
+languages = ["IFC", "EXPRESS"]
+
+# Grammars live in this repository under grammars/. `rev` must be a commit that
+# contains the generated src/parser.c files; for local development use a
+# `file:///` URL to your checkout (see clients/zed/README.md).
+[grammars.ifc]
+repository = "https://github.com/JR-Morgan/IFC-LSP"
+path = "grammars/tree-sitter-ifc"
+rev = "REPLACE_WITH_COMMIT_SHA"
+
+[grammars.express]
+repository = "https://github.com/JR-Morgan/IFC-LSP"
+path = "grammars/tree-sitter-express"
+rev = "REPLACE_WITH_COMMIT_SHA"

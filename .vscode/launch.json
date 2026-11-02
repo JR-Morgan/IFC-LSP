@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}/clients/vscode"],
+      "outFiles": ["${workspaceFolder}/clients/vscode/dist/**/*.js"],
+      "env": { "IFC_LSP_LOG": "debug" },
+      "preLaunchTask": "build: all"
+    }
+  ]
+}

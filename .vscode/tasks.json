@@ -1,0 +1,46 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "server: build",
+      "type": "shell",
+      "command": "cargo build",
+      "options": { "cwd": "${workspaceFolder}/server" },
+      "windows": {
+        "options": {
+          "cwd": "${workspaceFolder}/server",
+          "env": { "PATH": "${env:USERPROFILE}\\.cargo\\bin;${env:PATH}" }
+        }
+      },
+      "linux": {
+        "options": {
+          "cwd": "${workspaceFolder}/server",
+          "env": { "PATH": "${env:HOME}/.cargo/bin:${env:PATH}" }
+        }
+      },
+      "osx": {
+        "options": {
+          "cwd": "${workspaceFolder}/server",
+          "env": { "PATH": "${env:HOME}/.cargo/bin:${env:PATH}" }
+        }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "vscode client: build",
+      "type": "shell",
+      "command": "pnpm build",
+      "options": { "cwd": "${workspaceFolder}/clients/vscode" },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "build: all",
+      "dependsOn": ["server: build", "vscode client: build"],
+      "dependsOrder": "parallel",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    }
+  ]
+}

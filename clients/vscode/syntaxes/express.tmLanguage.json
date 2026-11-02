@@ -1,0 +1,66 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "EXPRESS",
+  "scopeName": "source.express",
+  "patterns": [
+    { "include": "#comment-block" },
+    { "include": "#comment-line" },
+    { "include": "#string" },
+    { "include": "#declaration" },
+    { "include": "#section-keyword" },
+    { "include": "#keyword" },
+    { "include": "#builtin-type" },
+    { "include": "#constant" },
+    { "include": "#number" },
+    { "include": "#operator" }
+  ],
+  "repository": {
+    "comment-block": {
+      "name": "comment.block.express",
+      "begin": "\\(\\*",
+      "end": "\\*\\)",
+      "patterns": [{ "include": "#comment-block" }]
+    },
+    "comment-line": {
+      "name": "comment.line.double-dash.express",
+      "match": "--.*$"
+    },
+    "string": {
+      "name": "string.quoted.single.express",
+      "begin": "'",
+      "end": "'",
+      "patterns": [{ "match": "''", "name": "constant.character.escape.express" }]
+    },
+    "declaration": {
+      "match": "\\b(?i:(SCHEMA|ENTITY|TYPE|FUNCTION|RULE|PROCEDURE|CONSTANT))\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "storage.type.declaration.express" },
+        "2": { "name": "entity.name.type.express" }
+      }
+    },
+    "section-keyword": {
+      "match": "\\b(?i:END_SCHEMA|END_ENTITY|END_TYPE|END_FUNCTION|END_RULE|END_PROCEDURE|END_CONSTANT|END_LOCAL|END_IF|END_CASE|END_REPEAT|END_ALIAS|DERIVE|INVERSE|UNIQUE|WHERE|LOCAL)\\b",
+      "name": "keyword.control.section.express"
+    },
+    "keyword": {
+      "match": "\\b(?i:ABSTRACT|SUPERTYPE|SUBTYPE|OF|ONEOF|ANDOR|AND|OR|XOR|NOT|OPTIONAL|ENUMERATION|SELECT|EXTENSIBLE|BASED_ON|WITH|FOR|IF|THEN|ELSE|CASE|OTHERWISE|REPEAT|TO|BY|WHILE|UNTIL|RETURN|QUERY|EXISTS|SIZEOF|TYPEOF|NVL|USEDIN|IN|LIKE|MOD|DIV|SELF|FIXED|UNIQUE|REFERENCE|USE|FROM|AS|VAR|ALIAS|ESCAPE|SKIP|BEGIN|END|GENERIC|AGGREGATE|ARRAY|BAG|LIST|SET|ROLESOF|HIBOUND|HIINDEX|LOBOUND|LOINDEX|LENGTH|FORMAT|VALUE|VALUE_IN|VALUE_UNIQUE|ABS|ACOS|ASIN|ATAN|BLENGTH|COS|EXP|LOG|LOG2|LOG10|ODD|SIN|SQRT|TAN|INSERT|REMOVE)\\b",
+      "name": "keyword.other.express"
+    },
+    "builtin-type": {
+      "match": "\\b(?i:REAL|INTEGER|NUMBER|BOOLEAN|LOGICAL|STRING|BINARY)\\b",
+      "name": "support.type.builtin.express"
+    },
+    "constant": {
+      "match": "\\b(?i:TRUE|FALSE|UNKNOWN|PI|CONST_E)\\b|\\?",
+      "name": "constant.language.express"
+    },
+    "number": {
+      "match": "\\b[0-9]+(?:\\.[0-9]*)?(?:[Ee][-+]?[0-9]+)?\\b",
+      "name": "constant.numeric.express"
+    },
+    "operator": {
+      "match": ":=|<\\*|\\|\\||<=|>=|<>|:=:|:<>:|\\*\\*|[-+*/=<>:;,|\\\\.\\[\\]\\(\\)\\{\\}]",
+      "name": "keyword.operator.express"
+    }
+  }
+}

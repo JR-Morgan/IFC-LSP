@@ -1,0 +1,12 @@
+# Normalise every text file to LF in the repository and in the working tree,
+# regardless of the local core.autocrlf setting.
+* text=auto eol=lf
+
+# Keep upstream files byte-for-byte (hashes are recorded in schemas/NOTICE.md).
+schemas/*.exp -text
+*.ifc -text
+
+# Generated parsers: still text, but keep diffs out of PR views.
+grammars/*/src/parser.c linguist-generated=true
+grammars/*/src/grammar.json linguist-generated=true
+grammars/*/src/node-types.json linguist-generated=true

@@ -1,0 +1,116 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "IFC",
+  "scopeName": "source.ifc",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#section-keyword" },
+    { "include": "#header-function" },
+    { "include": "#definition" },
+    { "include": "#argument" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.block.ifc",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    "section-keyword": {
+      "match": "^\\s*(ISO-10303-21|END-ISO-10303-21|HEADER|ENDSEC|DATA)\\s*(;)",
+      "captures": {
+        "1": { "name": "keyword.control.section.ifc" },
+        "2": { "name": "punctuation.terminator.ifc" }
+      }
+    },
+    "header-function": {
+      "match": "\\b(FILE_DESCRIPTION|FILE_NAME|FILE_SCHEMA|FILE_POPULATION|SECTION_LANGUAGE|SECTION_CONTEXT)\\b(?=\\s*\\()",
+      "name": "support.function.header.ifc"
+    },
+    "definition": {
+      "match": "^\\s*(#[0-9]+)\\s*(=)\\s*(?:([A-Za-z_][A-Za-z0-9_]*)(?=\\s*\\()|(\\())",
+      "captures": {
+        "1": { "name": "entity.name.tag.instance.ifc" },
+        "2": { "name": "keyword.operator.assignment.ifc" },
+        "3": { "name": "entity.name.type.entity.ifc" },
+        "4": { "name": "punctuation.section.complex.begin.ifc" }
+      }
+    },
+    "argument": {
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#string" },
+        { "include": "#reference" },
+        { "include": "#typed-value" },
+        { "include": "#boolean" },
+        { "include": "#enum" },
+        { "include": "#null" },
+        { "include": "#derived" },
+        { "include": "#binary" },
+        { "include": "#number" },
+        { "include": "#punctuation" }
+      ]
+    },
+    "string": {
+      "name": "string.quoted.single.ifc",
+      "begin": "'",
+      "end": "'(?!')",
+      "patterns": [
+        { "match": "''", "name": "constant.character.escape.quote.ifc" },
+        { "match": "\\\\X2\\\\[0-9A-Fa-f]*\\\\X0\\\\", "name": "constant.character.escape.unicode.ifc" },
+        { "match": "\\\\X4\\\\[0-9A-Fa-f]*\\\\X0\\\\", "name": "constant.character.escape.unicode.ifc" },
+        { "match": "\\\\X\\\\[0-9A-Fa-f]{2}", "name": "constant.character.escape.ifc" },
+        { "match": "\\\\S\\\\.", "name": "constant.character.escape.ifc" },
+        { "match": "\\\\P[A-I]\\\\", "name": "constant.character.escape.ifc" }
+      ]
+    },
+    "reference": {
+      "match": "#[0-9]+",
+      "name": "variable.other.reference.ifc"
+    },
+    "typed-value": {
+      "match": "\\b([A-Za-z_][A-Za-z0-9_]*)(?=\\s*\\()",
+      "name": "support.type.typed-value.ifc"
+    },
+    "boolean": {
+      "match": "\\.(T|F|U)\\.",
+      "name": "constant.language.boolean.ifc"
+    },
+    "enum": {
+      "match": "\\.[A-Za-z_][A-Za-z0-9_]*\\.",
+      "name": "constant.language.enum.ifc"
+    },
+    "null": {
+      "match": "\\$",
+      "name": "constant.language.null.ifc"
+    },
+    "derived": {
+      "match": "\\*",
+      "name": "constant.language.derived.ifc"
+    },
+    "binary": {
+      "match": "\"[0-9A-Fa-f]*\"",
+      "name": "constant.numeric.binary.ifc"
+    },
+    "number": {
+      "patterns": [
+        {
+          "match": "[-+]?(?:[0-9]+\\.[0-9]*(?:[Ee][-+]?[0-9]+)?|[0-9]+[Ee][-+]?[0-9]+|\\.[0-9]+(?:[Ee][-+]?[0-9]+)?)",
+          "name": "constant.numeric.float.ifc"
+        },
+        {
+          "match": "[-+]?[0-9]+",
+          "name": "constant.numeric.integer.ifc"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        { "match": ";", "name": "punctuation.terminator.ifc" },
+        { "match": ",", "name": "punctuation.separator.ifc" },
+        { "match": "\\(", "name": "punctuation.section.arguments.begin.ifc" },
+        { "match": "\\)", "name": "punctuation.section.arguments.end.ifc" },
+        { "match": "=", "name": "keyword.operator.assignment.ifc" }
+      ]
+    }
+  }
+}
