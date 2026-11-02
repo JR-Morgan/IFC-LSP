@@ -17,9 +17,9 @@ languages = ["IFC", "EXPRESS"]
 [grammars.ifc]
 repository = "https://github.com/JR-Morgan/IFC-LSP"
 path = "grammars/tree-sitter-ifc"
-rev = "REPLACE_WITH_COMMIT_SHA"
+rev = "ce1a263710f425f81a3b2d8ebe8f08c1be107091"
 
 [grammars.express]
 repository = "https://github.com/JR-Morgan/IFC-LSP"
 path = "grammars/tree-sitter-express"
-rev = "REPLACE_WITH_COMMIT_SHA"
+rev = "ce1a263710f425f81a3b2d8ebe8f08c1be107091"
