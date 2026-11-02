@@ -18,14 +18,14 @@ language server written in Rust. Works on files of any size the editor can open.
 - **Syntax highlighting** for IFC/STEP files and EXPRESS schemas.
 - **Go to definition** and find references on `#123` instance references.
 - **Go to schema**: F12 on an entity name, typed value or enumeration value opens its EXPRESS declaration.
-- **Shows entity constructor on hover**L attributes (including inherited ones) next to the actual arguments.
+- **Entity constructor hover**: attributes (including inherited ones) next to the actual arguments.
 - **Basic schema validity checks**: unknown or abstract entities, wrong argument counts, undefined or duplicate ids, bad enumeration values, type mismatches and syntax errors.
 - **Wide Schema support**: `IFC2X3`, `IFC4`, `IFC4X1`, `IFC4X2`, `IFC4X3_ADD1`, `IFC4X3_ADD2`, chosen from the file's `FILE_SCHEMA` header. Extra `.exp` files can be added through settings.
 - **Fast**: a 74 MB file indexes in well under a second and edits are re-indexed incrementally.
 
 ## Debugging
 
-Requirements: a stable Rust toolchain (<https://rustup.rs>), Node.js 22 and pnpm.
+Requirements: a stable Rust toolchain (<https://rustup.rs>), Node.js 24 and pnpm.
 
 ### VS Code
 
