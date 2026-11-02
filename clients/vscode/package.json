@@ -9,6 +9,7 @@
   "engines": {
     "vscode": "^1.90.0"
   },
+  "packageManager": "pnpm@12.15.0",
   "categories": [
     "Programming Languages",
     "Linters"
