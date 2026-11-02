@@ -45,10 +45,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       options: { env: { ...process.env, IFC_LSP_LOG: process.env.IFC_LSP_LOG ?? "info" } },
     };
     const clientOptions: LanguageClientOptions = {
-      documentSelector: [
-        { language: "ifc" },
-        { scheme: SCHEMA_SCHEME, language: "express" },
-      ],
+      documentSelector: [{ language: "ifc" }, { scheme: SCHEMA_SCHEME, language: "express" }],
       synchronize: { configurationSection: "ifc" },
       initializationOptions: serverSettings(),
       outputChannel: output,
@@ -160,7 +157,10 @@ async function warnIfLarge(tab: vscode.Tab): Promise<void> {
     void vscode.window.showWarningMessage(
       `${path.basename(uri.fsPath)} is ${mb} MB. VS Code does not share files over 50 MB with extensions, so IFC hover, navigation and diagnostics are unavailable for it.`,
     );
-  } else if (size > TOKENIZE_LIMIT && vscode.workspace.getConfiguration("editor").get<boolean>("largeFileOptimizations", true)) {
+  } else if (
+    size > TOKENIZE_LIMIT &&
+    vscode.workspace.getConfiguration("editor").get<boolean>("largeFileOptimizations", true)
+  ) {
     warnedFiles.add(key);
     const pick = await vscode.window.showInformationMessage(
       `${path.basename(uri.fsPath)} is over 20 MB, so VS Code has disabled syntax colouring. The IFC language features still work.`,

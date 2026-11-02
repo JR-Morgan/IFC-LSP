@@ -107,16 +107,23 @@
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",
-    "package": "npx @vscode/vsce package --no-dependencies"
+    "package": "npx @vscode/vsce package --no-dependencies",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.10.0",
     "@types/vscode": "^1.90.0",
     "esbuild": "^0.25.0",
-    "typescript": "^5.7.0"
+    "eslint": "^10.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.72.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

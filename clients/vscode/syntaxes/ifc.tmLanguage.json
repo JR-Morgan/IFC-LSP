@@ -56,8 +56,14 @@
       "end": "'(?!')",
       "patterns": [
         { "match": "''", "name": "constant.character.escape.quote.ifc" },
-        { "match": "\\\\X2\\\\[0-9A-Fa-f]*\\\\X0\\\\", "name": "constant.character.escape.unicode.ifc" },
-        { "match": "\\\\X4\\\\[0-9A-Fa-f]*\\\\X0\\\\", "name": "constant.character.escape.unicode.ifc" },
+        {
+          "match": "\\\\X2\\\\[0-9A-Fa-f]*\\\\X0\\\\",
+          "name": "constant.character.escape.unicode.ifc"
+        },
+        {
+          "match": "\\\\X4\\\\[0-9A-Fa-f]*\\\\X0\\\\",
+          "name": "constant.character.escape.unicode.ifc"
+        },
         { "match": "\\\\X\\\\[0-9A-Fa-f]{2}", "name": "constant.character.escape.ifc" },
         { "match": "\\\\S\\\\.", "name": "constant.character.escape.ifc" },
         { "match": "\\\\P[A-I]\\\\", "name": "constant.character.escape.ifc" }

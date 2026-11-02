@@ -48,6 +48,8 @@ jobs:
           cache: pnpm
           cache-dependency-path: clients/vscode/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm build
 
@@ -59,11 +61,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-wasip2
-          components: rustfmt
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: clients/zed
       - run: cargo fmt --all --check
+        working-directory: clients/zed
+      - run: cargo clippy --all-targets --target wasm32-wasip2 -- -D warnings
         working-directory: clients/zed
       - run: cargo build --release --target wasm32-wasip2
         working-directory: clients/zed
