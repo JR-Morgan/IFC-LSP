@@ -43,7 +43,9 @@ a commit that contains the generated `src/parser.c` files.
    SHA.
 2. Build the server (`cargo build --release` in `../server`) and either put it on PATH or set
    `lsp.ifc-lsp.binary.path`.
-3. In Zed run `zed: install dev extension` and pick this `clients/zed/` directory.
+3. In Zed run `zed: install dev extension` and pick this `clients/zed/` directory. If the
+   registry extension "IFC" (id `ifc`, a different project) is installed, uninstall it first:
+   both claim `.ifc` files and the language name IFC.
 4. Open an `.ifc` file. The Zed log (`zed: open log`) shows the server start-up.
 
 After changing a grammar, run `npx tree-sitter-cli generate` in its directory, commit, and
