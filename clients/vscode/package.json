@@ -10,6 +10,7 @@
     "url": "https://github.com/JR-Morgan/IFC-LSP"
   },
   "license": "Apache-2.0",
+  "pricing": "Free",
   "private": true,
   "engines": {
     "vscode": "^1.90.0"
@@ -113,7 +114,7 @@
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",
-    "package": "npx @vscode/vsce package --no-dependencies",
+    "package": "vsce package --no-dependencies",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -125,15 +126,11 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.10.0",
     "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^4.1.0",
     "esbuild": "^0.25.0",
     "eslint": "^10.14.0",
     "prettier": "^3.9.10",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.72.1"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
   }
 }

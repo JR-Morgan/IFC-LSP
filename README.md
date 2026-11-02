@@ -54,6 +54,22 @@ Requirements: a stable Rust toolchain (<https://rustup.rs>), Node.js 24 and pnpm
 
 More detail on the Zed side, including publishing, is in `clients/zed/README.md`.
 
+## Releasing
+
+Releases happen only from tags. Set the same version in `server/Cargo.toml`,
+`clients/vscode/package.json` and `clients/zed/extension.toml`, then:
+
+```sh
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+The release workflow checks the versions match the tag, builds the server for Linux
+(x64, arm64), macOS (x64, arm64) and Windows (x64), packages one `.vsix` per platform, and
+attaches everything to a GitHub release. The Zed extension downloads the server archives from
+that release. If the repository variable `PUBLISH_VSCODE_MARKETPLACE` is `true`, the `.vsix`
+files are also published to the Visual Studio Marketplace through Trusted Publishing.
+Zed publishing is a pull request to the Zed extension registry; see `clients/zed/README.md`.
+
 ## Licence
 
 Apache-2.0, copyright 2026 Jedd Morgan. The EXPRESS schemas in `schemas/` are

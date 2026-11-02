@@ -59,8 +59,32 @@ update `rev`. Query files (`highlights.scm`, `brackets.scm`, `outline.scm`) live
 
 ## Publishing
 
-Zed extensions are published by adding the extension as a Git submodule to
-<https://github.com/zed-industries/extensions> and listing it in `extensions.toml`. This
-directory must then be the root of its own repository (or the submodule must point at a
-repository whose root contains `extension.toml`); a subtree split of `clients/zed/` is the usual
-way to do that from a monorepo.
+Zed's registry is <https://github.com/zed-industries/extensions>: every extension is a Git
+submodule plus an entry in `extensions.toml`. This extension lives in a subdirectory, which
+the registry supports through the `path` field. The `LICENSE` copy in this directory is
+required (the registry checks the extension root, not the repository root).
+
+First submission:
+
+1. Tag a release of this repository first; the extension downloads `ifc-lsp` from GitHub
+   releases, so without one it cannot start the server for users.
+2. Fork `zed-industries/extensions` to your personal account, clone the fork, then:
+   ```sh
+   git submodule init && git submodule update
+   git submodule add https://github.com/JR-Morgan/IFC-LSP.git extensions/ifc-lsp
+   ```
+3. Add to `extensions.toml` (the `version` must equal the one in `extension.toml` at the
+   submodule commit):
+   ```toml
+   [ifc-lsp]
+   submodule = "extensions/ifc-lsp"
+   path = "clients/zed"
+   version = "0.1.0"
+   ```
+4. `pnpm sort-extensions`, commit, push, open a PR against `zed-industries/extensions`.
+   One extension per PR; the extension is published once the PR is merged.
+
+Updates: bump `version` in `extension.toml` (and the `rev` fields if the grammars changed),
+tag a release, then in the fork run
+`git submodule update --remote extensions/ifc-lsp`, set the same version in
+`extensions.toml`, and open a PR.

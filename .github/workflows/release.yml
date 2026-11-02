@@ -1,9 +1,10 @@
 name: Release
 
-# Builds ifc-lsp for every supported platform and attaches the archives to a
-# GitHub release. The Zed extension downloads them by name:
-#   ifc-lsp-<tag>-<target>.tar.gz   (Linux, macOS)
-#   ifc-lsp-<tag>-<target>.zip      (Windows)
+# Runs only for `v*` tags. Produces, on one GitHub release:
+#   ifc-lsp-<tag>-<target>.tar.gz | .zip         server archives (the Zed extension downloads these)
+#   ifc-language-support-<version>-<vscode-target>.vsix   platform-specific VS Code packages
+# and, when the repository variable PUBLISH_VSCODE_MARKETPLACE is "true", publishes the
+# .vsix files to the Visual Studio Marketplace through Trusted Publishing (OIDC).
 on:
   push:
     tags: ["v*"]
@@ -11,12 +12,31 @@ on:
 permissions:
   contents: read
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
-  build:
-    name: ${{ matrix.target }}
+  versions:
+    name: tag matches manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: |
+          tag="${GITHUB_REF_NAME#v}"
+          cargo=$(grep -m1 '^version = ' server/Cargo.toml | cut -d'"' -f2)
+          zed=$(grep -m1 '^version = ' clients/zed/extension.toml | cut -d'"' -f2)
+          vscode=$(node -p "require('./clients/vscode/package.json').version")
+          echo "tag=$tag server=$cargo zed=$zed vscode=$vscode"
+          for v in "$cargo" "$zed" "$vscode"; do
+            [ "$v" = "$tag" ] || { echo "::error::version $v does not match tag $tag"; exit 1; }
+          done
+
+  server:
+    name: server (${{ matrix.target }})
+    needs: versions
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -25,12 +45,14 @@ jobs:
             target: x86_64-unknown-linux-gnu
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-          - os: macos-13
+          - os: macos-15-intel
             target: x86_64-apple-darwin
           - os: macos-latest
             target: aarch64-apple-darwin
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+    env:
+      TARGET: ${{ matrix.target }}
     defaults:
       run:
         working-directory: server
@@ -43,31 +65,125 @@ jobs:
           targets: ${{ matrix.target }}
       # No build cache on purpose: a poisoned cache entry could end up inside a
       # published binary, and a cold build once per tag is cheap.
-      - run: cargo build --release --target ${{ matrix.target }}
+      - run: cargo build --release --target "$TARGET"
+        shell: bash
       - name: Package (unix)
         if: runner.os != 'Windows'
-        env:
-          TARGET: ${{ matrix.target }}
         run: |
-          name="ifc-lsp-${GITHUB_REF_NAME}-${TARGET}"
-          tar -C "target/${TARGET}/release" -czf "$name.tar.gz" ifc-lsp
-          echo "ASSET=$name.tar.gz" >> "$GITHUB_ENV"
+          mkdir -p dist/archive dist/binary
+          cp "target/$TARGET/release/ifc-lsp" dist/binary/
+          tar -C "target/$TARGET/release" -czf "dist/archive/ifc-lsp-$GITHUB_REF_NAME-$TARGET.tar.gz" ifc-lsp
       - name: Package (windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        env:
-          TARGET: ${{ matrix.target }}
         run: |
-          $name = "ifc-lsp-$env:GITHUB_REF_NAME-$env:TARGET"
-          Compress-Archive -Path "target/$env:TARGET/release/ifc-lsp.exe" -DestinationPath "$name.zip"
-          "ASSET=$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Upload to the GitHub release
-        shell: bash
-        env:
+          New-Item -ItemType Directory -Force dist/archive, dist/binary | Out-Null
+          Copy-Item "target/$env:TARGET/release/ifc-lsp.exe" dist/binary/
+          Compress-Archive -Path "target/$env:TARGET/release/ifc-lsp.exe" -DestinationPath "dist/archive/ifc-lsp-$env:GITHUB_REF_NAME-$env:TARGET.zip"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: archive-${{ matrix.target }}
+          path: server/dist/archive/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binary-${{ matrix.target }}
+          path: server/dist/binary/*
+          if-no-files-found: error
+
+  vsix:
+    name: vs code packages
+    needs: server
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/vscode
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: binary-*
+          path: clients/vscode/binaries
+      - name: Package one .vsix per platform
+        run: |
+          version=$(node -p "require('./package.json').version")
+          mkdir -p ../../dist
+          for pair in \
+            x86_64-pc-windows-msvc:win32-x64 \
+            x86_64-unknown-linux-gnu:linux-x64 \
+            aarch64-unknown-linux-gnu:linux-arm64 \
+            x86_64-apple-darwin:darwin-x64 \
+            aarch64-apple-darwin:darwin-arm64; do
+            rust="${pair%%:*}"; vscode="${pair##*:}"
+            rm -rf server && mkdir -p "server/$vscode"
+            cp "binaries/binary-$rust"/ifc-lsp* "server/$vscode/"
+            chmod +x "server/$vscode"/ifc-lsp*
+            pnpm exec vsce package --no-dependencies --target "$vscode" \
+              -o "../../dist/ifc-language-support-$version-$vscode.vsix"
+          done
+          rm -rf server binaries
+          ls -l ../../dist
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: vsix
+          path: dist/*.vsix
+          if-no-files-found: error
+
+  release:
+    name: github release
+    needs: [server, vsix]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: archive-*
+          merge-multiple: true
+          path: dist
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: vsix
+          path: dist
+      - env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          # Five matrix jobs race to create the release; whichever loses just uploads.
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
-            || gh release create "$GITHUB_REF_NAME" --generate-notes \
-            || true
-          gh release upload "$GITHUB_REF_NAME" "$ASSET" --clobber
+          ls -l dist
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --generate-notes
+
+  publish-vscode:
+    name: visual studio marketplace
+    if: vars.PUBLISH_VSCODE_MARKETPLACE == 'true'
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: clients/vscode
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: vsix
+          path: dist
+      - run: pnpm exec vsce publish --oidc --packagePath ../../dist/*.vsix
