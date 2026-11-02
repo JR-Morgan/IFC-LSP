@@ -23,7 +23,7 @@ let client: LanguageClient | undefined;
 const warnedFiles = new Set<string>();
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  const output = vscode.window.createOutputChannel("IFC Language Server");
+  const output = vscode.window.createOutputChannel("IFC Language Server", { log: true });
   context.subscriptions.push(output);
 
   const start = async () => {
