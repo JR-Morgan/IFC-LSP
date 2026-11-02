@@ -9,12 +9,14 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     name: ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -33,28 +35,39 @@ jobs:
       run:
         working-directory: server
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           targets: ${{ matrix.target }}
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: server
+      # No build cache on purpose: a poisoned cache entry could end up inside a
+      # published binary, and a cold build once per tag is cheap.
       - run: cargo build --release --target ${{ matrix.target }}
       - name: Package (unix)
         if: runner.os != 'Windows'
+        env:
+          TARGET: ${{ matrix.target }}
         run: |
-          name=ifc-lsp-${GITHUB_REF_NAME}-${{ matrix.target }}
-          tar -C target/${{ matrix.target }}/release -czf "$name.tar.gz" ifc-lsp
-          echo "ASSET=server/$name.tar.gz" >> "$GITHUB_ENV"
+          name="ifc-lsp-${GITHUB_REF_NAME}-${TARGET}"
+          tar -C "target/${TARGET}/release" -czf "$name.tar.gz" ifc-lsp
+          echo "ASSET=$name.tar.gz" >> "$GITHUB_ENV"
       - name: Package (windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          TARGET: ${{ matrix.target }}
         run: |
-          $name = "ifc-lsp-$env:GITHUB_REF_NAME-${{ matrix.target }}"
-          Compress-Archive -Path "target/${{ matrix.target }}/release/ifc-lsp.exe" -DestinationPath "$name.zip"
-          "ASSET=server/$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ env.ASSET }}
-          generate_release_notes: true
+          $name = "ifc-lsp-$env:GITHUB_REF_NAME-$env:TARGET"
+          Compress-Archive -Path "target/$env:TARGET/release/ifc-lsp.exe" -DestinationPath "$name.zip"
+          "ASSET=$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Upload to the GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Five matrix jobs race to create the release; whichever loses just uploads.
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --generate-notes \
+            || true
+          gh release upload "$GITHUB_REF_NAME" "$ASSET" --clobber

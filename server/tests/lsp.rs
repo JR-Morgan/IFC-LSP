@@ -1,3 +1,5 @@
+#![allow(clippy::print_stderr)]
+
 //! Drives the real binary over stdio: open, hover, definition, references,
 //! incremental change, diagnostics, shutdown.
 

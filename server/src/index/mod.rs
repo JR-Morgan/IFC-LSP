@@ -69,9 +69,7 @@ impl Document {
             IdMap::Dense(v) => v.capacity() * 4,
             IdMap::Sparse(m) => m.capacity() * 12,
         };
-        self.entities.capacity() * std::mem::size_of::<EntityRecord>()
-            + ids
-            + self.duplicates.capacity() * 8
+        self.entities.capacity() * size_of::<EntityRecord>() + ids + self.duplicates.capacity() * 8
     }
 
     /// Index of the entity record defining `id`.

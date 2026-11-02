@@ -1,3 +1,6 @@
+// The CLI subcommands are the only code allowed to write to stdout.
+#![allow(clippy::print_stdout)]
+
 use std::io::Write;
 use std::time::Instant;
 
@@ -6,11 +9,11 @@ use ifc_lsp::index::Document;
 struct StderrLogger;
 
 impl log::Log for StderrLogger {
-    fn enabled(&self, metadata: &log::Metadata) -> bool {
+    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
         metadata.level() <= log::max_level()
     }
 
-    fn log(&self, record: &log::Record) {
+    fn log(&self, record: &log::Record<'_>) {
         if self.enabled(record.metadata()) {
             let _ = writeln!(
                 std::io::stderr().lock(),
