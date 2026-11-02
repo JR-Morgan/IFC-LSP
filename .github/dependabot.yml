@@ -27,6 +27,10 @@ updates:
     directory: /clients/vscode
     schedule:
       interval: weekly
+    ignore:
+      # @types/node must track the Node version inside VS Code's extension host, not npm's latest.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     cooldown:
       semver-major-days: 30
       semver-minor-days: 14

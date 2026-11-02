@@ -13,7 +13,7 @@
   "pricing": "Free",
   "private": true,
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.91.0"
   },
   "packageManager": "pnpm@12.15.0",
   "categories": [
@@ -124,8 +124,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^22.10.0",
-    "@types/vscode": "^1.90.0",
+    "@types/node": "^24.0.0",
+    "@types/vscode": "^1.91.0",
     "@vscode/vsce": "^4.1.0",
     "esbuild": "^0.25.0",
     "eslint": "^10.14.0",
