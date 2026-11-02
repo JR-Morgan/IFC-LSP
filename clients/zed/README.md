@@ -39,7 +39,7 @@ a commit that contains the generated `src/parser.c` files.
 1. Commit this repository and push it, then put the commit SHA in both `rev` fields in
    `extension.toml` (and fix `repository` if the GitHub location differs). For purely local
    work the repository can be a `file:///` URL to your checkout, e.g.
-   `file:///C:/Speckle%20Repos/IFC%20Visual%20Studio%20Extension`, still with a committed
+   `file:///C:/src/IFC-LSP`, still with a committed
    SHA.
 2. Build the server (`cargo build --release` in `../server`) and either put it on PATH or set
    `lsp.ifc-lsp.binary.path`.

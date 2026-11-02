@@ -15,7 +15,7 @@
     "version": "0.1.0",
     "license": "Apache-2.0",
     "description": "Tree-sitter grammar for ISO 10303-21 (STEP Part 21) files such as IFC",
-    "authors": [{ "name": "Speckle" }]
+    "authors": [{ "name": "Jedd Morgan" }]
   },
   "bindings": {
     "c": false,

@@ -3,7 +3,12 @@
   "displayName": "IFC Language Support",
   "description": "Syntax highlighting, navigation, hover and diagnostics for IFC (ISO 10303-21 STEP) files, powered by a native language server.",
   "version": "0.1.0",
-  "publisher": "speckle",
+  "publisher": "JR-Morgan",
+  "author": "Jedd Morgan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JR-Morgan/IFC-LSP"
+  },
   "license": "Apache-2.0",
   "private": true,
   "engines": {

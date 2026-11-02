@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 description = "Language server for IFC (ISO 10303-21 STEP) files"
 license = "Apache-2.0"
+authors = ["Jedd Morgan"]
+repository = "https://github.com/JR-Morgan/IFC-LSP"
 publish = false
 
 [[bin]]

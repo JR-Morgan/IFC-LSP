@@ -15,7 +15,7 @@
     "version": "0.1.0",
     "license": "Apache-2.0",
     "description": "Tree-sitter grammar for EXPRESS (ISO 10303-11) schema files, highlighting only",
-    "authors": [{ "name": "Speckle" }]
+    "authors": [{ "name": "Jedd Morgan" }]
   },
   "bindings": {
     "c": false,
