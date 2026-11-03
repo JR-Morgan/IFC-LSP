@@ -11,3 +11,4 @@
 (string) @string
 (operator) @operator
 (punctuation) @punctuation.delimiter
+["(" ")" "[" "]" "{" "}"] @punctuation.bracket

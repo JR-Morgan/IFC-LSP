@@ -119,6 +119,10 @@ fn end_to_end_over_stdio() {
     );
     assert_eq!(init["result"]["capabilities"]["textDocumentSync"], json!(2));
     assert_eq!(init["result"]["capabilities"]["hoverProvider"], json!(true));
+    assert_eq!(
+        init["result"]["capabilities"]["foldingRangeProvider"],
+        json!(true)
+    );
     lsp.notify("initialized", json!({}));
 
     lsp.notify(
@@ -259,7 +263,7 @@ fn end_to_end_over_stdio() {
         "textDocument/definition",
         json!({"textDocument": {"uri": schema_uri}, "position": {"line": attr_line, "character": col}}),
     );
-    let line = def["result"]["range"]["start"]["line"].as_u64().unwrap() as usize;
+    let line = def["result"][0]["range"]["start"]["line"].as_u64().unwrap() as usize;
     assert_eq!(
         text.lines().nth(line).unwrap().trim_end(),
         "ENTITY IfcDirection"
@@ -362,6 +366,149 @@ fn schema_definitions_use_cached_files_by_default() {
         .as_str()
         .unwrap_or_default();
     assert!(md.contains("### IfcAxis2Placement3D"), "{hover}");
+
+    lsp.request("shutdown", Value::Null);
+    lsp.notify("exit", Value::Null);
+    let _ = lsp.child.wait();
+}
+
+/// Folding of IFC sections, and a `.exp` buffer opened from the editor: parsed live,
+/// with hover, go-to-definition (entities, types, enum values) and block folding that
+/// follow edits.
+#[test]
+fn folding_and_live_express_documents() {
+    let mut lsp = Lsp::start();
+    lsp.request(
+        "initialize",
+        json!({"processId": null, "rootUri": null, "capabilities": {}, "initializationOptions": {"schemaDocuments": "virtual"}}),
+    );
+    lsp.notify("initialized", json!({}));
+
+    lsp.notify(
+        "textDocument/didOpen",
+        json!({"textDocument": {"uri": URI, "languageId": "ifc", "version": 1, "text": TEXT}}),
+    );
+    let folds = lsp.request(
+        "textDocument/foldingRange",
+        json!({"textDocument": {"uri": URI}}),
+    );
+    let lines: Vec<(u64, u64)> = folds["result"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| {
+            (
+                r["startLine"].as_u64().unwrap(),
+                r["endLine"].as_u64().unwrap(),
+            )
+        })
+        .collect();
+    assert_eq!(lines, vec![(1, 2), (4, 8)], "{folds:#?}");
+
+    const EXP_URI: &str = "file:///tmp/live.exp";
+    let exp = "SCHEMA LIVE;\n\
+               TYPE Colour = ENUMERATION OF\n\
+               \t(RED,\n\
+               \t GREEN);\n\
+               END_TYPE;\n\
+               \n\
+               ENTITY Shape;\n\
+               \tName : STRING;\n\
+               \tTint : Colour;\n\
+               END_ENTITY;\n\
+               \n\
+               ENTITY Box\n\
+               \tSUBTYPE OF (Shape);\n\
+               \tSize : REAL;\n\
+               END_ENTITY;\n\
+               END_SCHEMA;\n";
+    lsp.notify(
+        "textDocument/didOpen",
+        json!({"textDocument": {"uri": EXP_URI, "languageId": "express", "version": 1, "text": exp}}),
+    );
+
+    // Hover on the entity name of `ENTITY Shape;`.
+    let hover = lsp.request(
+        "textDocument/hover",
+        json!({"textDocument": {"uri": EXP_URI}, "position": {"line": 6, "character": 9}}),
+    );
+    let text = hover["result"]["contents"]["value"].as_str().unwrap();
+    assert!(text.contains("Shape"), "{text}");
+
+    // Definition on the type reference `Colour` in `Tint : Colour;` -> the TYPE line.
+    let def = lsp.request(
+        "textDocument/definition",
+        json!({"textDocument": {"uri": EXP_URI}, "position": {"line": 8, "character": 10}}),
+    );
+    assert_eq!(def["result"][0]["uri"], json!(EXP_URI));
+    assert_eq!(
+        def["result"][0]["range"]["start"],
+        json!({"line": 1, "character": 5})
+    );
+
+    // Definition on the supertype in `SUBTYPE OF (Shape)` -> the ENTITY line.
+    let def = lsp.request(
+        "textDocument/definition",
+        json!({"textDocument": {"uri": EXP_URI}, "position": {"line": 12, "character": 15}}),
+    );
+    assert_eq!(
+        def["result"][0]["range"]["start"],
+        json!({"line": 6, "character": 7})
+    );
+
+    // Definition on an enum value lands on its line in the ENUMERATION.
+    let def = lsp.request(
+        "textDocument/definition",
+        json!({"textDocument": {"uri": EXP_URI}, "position": {"line": 3, "character": 4}}),
+    );
+    assert_eq!(
+        def["result"][0]["range"]["start"],
+        json!({"line": 3, "character": 2})
+    );
+
+    // One fold per block, closing keyword left visible.
+    let folds = lsp.request(
+        "textDocument/foldingRange",
+        json!({"textDocument": {"uri": EXP_URI}}),
+    );
+    let lines: Vec<(u64, u64)> = folds["result"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| {
+            (
+                r["startLine"].as_u64().unwrap(),
+                r["endLine"].as_u64().unwrap(),
+            )
+        })
+        .collect();
+    assert_eq!(lines, vec![(1, 3), (6, 8), (11, 13)], "{folds:#?}");
+
+    // Insert a comment line at the top: every definition moves down by one.
+    lsp.notify(
+        "textDocument/didChange",
+        json!({"textDocument": {"uri": EXP_URI, "version": 2}, "contentChanges": [
+            {"range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}}, "text": "-- live edit\n"}
+        ]}),
+    );
+    let def = lsp.request(
+        "textDocument/definition",
+        json!({"textDocument": {"uri": EXP_URI}, "position": {"line": 9, "character": 10}}),
+    );
+    assert_eq!(
+        def["result"][0]["range"]["start"],
+        json!({"line": 2, "character": 5})
+    );
+
+    lsp.notify(
+        "textDocument/didClose",
+        json!({"textDocument": {"uri": EXP_URI}}),
+    );
+    let def = lsp.request(
+        "textDocument/definition",
+        json!({"textDocument": {"uri": EXP_URI}, "position": {"line": 9, "character": 10}}),
+    );
+    assert!(def["result"].is_null(), "{def:#?}");
 
     lsp.request("shutdown", Value::Null);
     lsp.notify("exit", Value::Null);

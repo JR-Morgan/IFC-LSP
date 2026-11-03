@@ -28,7 +28,12 @@ Settings example:
     }
   },
   // Zed skips language servers for buffers with lines longer than this (default 20000).
-  "global_lsp_settings": { "max_buffer_line_length": 100000000 }
+  "global_lsp_settings": { "max_buffer_line_length": 100000000 },
+  // Folding comes from the server; Zed otherwise folds by indentation, which IFC lacks.
+  "languages": {
+    "IFC": { "document_folding_ranges": "on" },
+    "EXPRESS": { "document_folding_ranges": "on" }
+  }
 }
 ```
 

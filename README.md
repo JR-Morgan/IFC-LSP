@@ -18,6 +18,8 @@ language server written in Rust. Works on files of any size the editor can open.
 - **Syntax highlighting** for IFC/STEP files and EXPRESS schemas.
 - **Go to definition** and find references on `#123` instance references.
 - **Go to schema**: F12 on an entity name, typed value or enumeration value opens its EXPRESS declaration.
+- **EXPRESS files**: any `.exp` opened in the editor gets hover, go to definition (entities, types, enum values) and folding.
+- **Folding** of the `HEADER;` and `DATA;` sections, and of EXPRESS declarations.
 - **Entity constructor hover**: attributes (including inherited ones) next to the actual arguments.
 - **Basic schema validity checks**: unknown or abstract entities, wrong argument counts, undefined or duplicate ids, bad enumeration values, type mismatches and syntax errors.
 - **Wide Schema support**: `IFC2X3`, `IFC4`, `IFC4X1`, `IFC4X2`, `IFC4X3_ADD1`, `IFC4X3_ADD2`, chosen from the file's `FILE_SCHEMA` header. Extra `.exp` files can be added through settings.
@@ -46,9 +48,17 @@ Requirements: a stable Rust toolchain (<https://rustup.rs>), Node.js 24 and pnpm
    ```
 2. In Zed run `zed: install dev extension` and choose the `clients/zed/` folder.
 3. Raise Zed's line-length cut-off, otherwise it silently skips language servers for IFC
-   buffers (the default is 20 000 characters and IFC lines are often far longer):
+   buffers (the default is 20 000 characters and IFC lines are often far longer), and turn
+   on server-provided folding (Zed otherwise folds by indentation, which IFC files have
+   none of):
    ```json
-   { "global_lsp_settings": { "max_buffer_line_length": 100000000 } }
+   {
+     "global_lsp_settings": { "max_buffer_line_length": 100000000 },
+     "languages": {
+       "IFC": { "document_folding_ranges": "on" },
+       "EXPRESS": { "document_folding_ranges": "on" }
+     }
+   }
    ```
 4. Open an `.ifc` file. Server logs are under `zed: open log`.
 
