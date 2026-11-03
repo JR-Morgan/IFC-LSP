@@ -65,6 +65,13 @@ module.exports = grammar({
         $.string,
         $.operator,
         $.punctuation,
+        // Brackets stay anonymous tokens so editor bracket queries can match them.
+        "(",
+        ")",
+        "[",
+        "]",
+        "{",
+        "}",
       ),
 
     keyword: (_) => token(prec(1, choice(...KEYWORDS.map(caseInsensitive)))),
@@ -83,7 +90,7 @@ module.exports = grammar({
     operator: (_) =>
       token(choice(":=:", ":<>:", ":=", "<*", "||", "<=", ">=", "<>", "**", "+", "-", "*", "/", "=", "<", ">", "|", "\\", ".")),
 
-    punctuation: (_) => token(choice(";", ":", ",", "(", ")", "[", "]", "{", "}")),
+    punctuation: (_) => token(choice(";", ":", ",")),
 
     comment: (_) => token(seq("(*", /[^*]*\*+([^)*][^*]*\*+)*/, ")")),
 
