@@ -10,6 +10,9 @@ under a second and edits are re-indexed incrementally.
 - Go to definition and find references on `#123` instance references.
 - Go to schema: F12 on an entity name, typed value or enumeration value opens its EXPRESS
   declaration.
+- EXPRESS files: any `.exp` opened in the editor gets hover, go to definition (entities,
+  types, enum values) and folding.
+- Folding of the `HEADER;` and `DATA;` sections, and of EXPRESS declarations.
 - Hover on an entity constructor shows its attributes, including inherited ones, next to the
   actual arguments.
 - Diagnostics for obviously invalid content: unknown or abstract entities, wrong argument

@@ -500,3 +500,78 @@ pub fn parse(src: &str) -> Schema {
     schema.resolve();
     schema
 }
+
+/// Keywords that open a foldable block, paired with their `END_*` closer. SCHEMA is left
+/// out so that "fold all" does not collapse a whole file into one line.
+const BLOCK_KEYWORDS: [&str; 6] = [
+    "ENTITY",
+    "TYPE",
+    "FUNCTION",
+    "RULE",
+    "PROCEDURE",
+    "SUBTYPE_CONSTRAINT",
+];
+
+/// Byte spans `(start of opening keyword, start of END_* keyword)` of every block
+/// declaration in `src`, in source order. Unbalanced input is tolerated: a stray
+/// closer is ignored and an unclosed block is dropped.
+pub fn block_spans(src: &str) -> Vec<(usize, usize)> {
+    let mut lx = Lexer::new(src);
+    let mut open: Vec<(usize, usize)> = Vec::new();
+    let mut out = Vec::new();
+    loop {
+        let tok = lx.next();
+        let Tok::Ident(word) = tok else {
+            if tok == Tok::Eof {
+                break;
+            }
+            continue;
+        };
+        if let Some(kw) = BLOCK_KEYWORDS
+            .iter()
+            .position(|k| word.eq_ignore_ascii_case(k))
+        {
+            open.push((kw, lx.tok_start));
+        } else if let Some(rest) = word
+            .get(..4)
+            .filter(|p| p.eq_ignore_ascii_case("END_"))
+            .map(|_| &word[4..])
+            && let Some(kw) = BLOCK_KEYWORDS
+                .iter()
+                .position(|k| rest.eq_ignore_ascii_case(k))
+            && let Some(depth) = open.iter().rposition(|(k, _)| *k == kw)
+        {
+            let (_, start) = open[depth];
+            open.truncate(depth);
+            out.push((start, lx.tok_start));
+        }
+    }
+    out.sort_unstable();
+    out
+}
+
+#[cfg(test)]
+mod block_tests {
+    use super::block_spans;
+
+    const SRC: &str = "SCHEMA S;\nTYPE A = ENUMERATION OF (X, Y);\nEND_TYPE;\n(* END_ENTITY in a comment *)\nENTITY B;\n  a : A;\n WHERE\n  W1 : a = X;\nEND_ENTITY;\nFUNCTION F : INTEGER;\n  RETURN(1);\nEND_FUNCTION;\nEND_SCHEMA;\n";
+
+    #[test]
+    fn finds_each_block() {
+        let spans = block_spans(SRC);
+        let text = |(s, e): (usize, usize)| (&SRC[s..s + 4], &SRC[e..e + 4]);
+        assert_eq!(spans.len(), 3, "{spans:?}");
+        assert_eq!(text(spans[0]), ("TYPE", "END_"));
+        assert_eq!(text(spans[1]), ("ENTI", "END_"));
+        assert_eq!(text(spans[2]), ("FUNC", "END_"));
+        assert!(SRC[spans[1].1..].starts_with("END_ENTITY"));
+    }
+
+    #[test]
+    fn tolerates_unbalanced_input() {
+        assert!(block_spans("END_TYPE; ENTITY X;").is_empty());
+        let spans = block_spans("ENTITY X;\nTYPE T = REAL;\nEND_ENTITY;");
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].0, 0);
+    }
+}

@@ -45,7 +45,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       options: { env: { ...process.env, IFC_LSP_LOG: process.env.IFC_LSP_LOG ?? "info" } },
     };
     const clientOptions: LanguageClientOptions = {
-      documentSelector: [{ language: "ifc" }, { scheme: SCHEMA_SCHEME, language: "express" }],
+      documentSelector: [
+        { language: "ifc" },
+        { scheme: "file", language: "express" },
+        { scheme: SCHEMA_SCHEME, language: "express" },
+      ],
       synchronize: { configurationSection: "ifc" },
       initializationOptions: serverSettings(),
       outputChannel: output,

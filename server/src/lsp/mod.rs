@@ -1,6 +1,7 @@
 //! LSP front end over stdio: one main loop thread, one analysis thread.
 
 mod analysis;
+mod folding;
 mod hover;
 
 use std::path::{Path, PathBuf};
@@ -14,16 +15,17 @@ use lsp_types::notification::Notification as _;
 use lsp_types::request::Request as _;
 use lsp_types::{
     DidChangeConfigurationParams, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
-    DidOpenTextDocumentParams, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverContents,
-    HoverParams, HoverProviderCapability, InitializeParams, InitializeResult, Location,
-    MarkupContent, MarkupKind, OneOf, Position, Range, ReferenceParams, ServerCapabilities,
-    ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
+    DidOpenTextDocumentParams, FoldingRange, FoldingRangeParams, FoldingRangeProviderCapability,
+    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverContents, HoverParams,
+    HoverProviderCapability, InitializeParams, InitializeResult, Location, MarkupContent,
+    MarkupKind, OneOf, Position, Range, ReferenceParams, ServerCapabilities, ServerInfo,
+    TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
 };
 use rustc_hash::FxHashMap;
 
 use crate::index::Document;
 use crate::schema::{Schema, SchemaSet};
-use crate::text::Offset;
+use crate::text::{Offset, TextBuffer};
 use analysis::{Analysis, DocState, Settings};
 
 const DEBOUNCE: Duration = Duration::from_millis(300);
@@ -33,10 +35,18 @@ pub const SCHEMA_SCHEME: &str = "ifc-schema";
 /// Custom request: `{ "uri": "ifc-schema:/IFC4_ADD2_TC1.exp" }` -> `{ "text": "..." }`.
 pub const SCHEMA_SOURCE_REQUEST: &str = "ifc/schemaSource";
 
+/// An EXPRESS file open in the editor. Reparsed lazily on the next request after an
+/// edit rather than per keystroke; a full IFC schema parses in a few tens of ms.
+struct SchemaDoc {
+    text: TextBuffer,
+    schema: Option<Arc<Schema>>,
+}
+
 #[allow(clippy::mutable_key_type)]
 struct Server {
     sender: crossbeam_channel::Sender<Message>,
     docs: FxHashMap<Uri, Arc<DocState>>,
+    schema_docs: FxHashMap<Uri, SchemaDoc>,
     settings: Arc<RwLock<Settings>>,
     analysis: Option<Analysis>,
     extra_schema_dirs: Vec<PathBuf>,
@@ -53,6 +63,7 @@ pub fn run_stdio() -> anyhow::Result<()> {
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         definition_provider: Some(OneOf::Left(true)),
         references_provider: Some(OneOf::Left(true)),
+        folding_range_provider: Some(FoldingRangeProviderCapability::Simple(true)),
         ..Default::default()
     };
     let (id, params) = connection.initialize_start()?;
@@ -73,6 +84,7 @@ pub fn run_stdio() -> anyhow::Result<()> {
     let mut server = Server {
         sender: connection.sender.clone(),
         docs: FxHashMap::default(),
+        schema_docs: FxHashMap::default(),
         settings: settings.clone(),
         analysis: Some(Analysis::start(connection.sender.clone(), settings)),
         extra_schema_dirs: Vec::new(),
@@ -255,8 +267,22 @@ impl Server {
         self.settings.read().unwrap().schemas.clone()
     }
 
-    /// The schema a schema-document URI refers to (virtual or on-disk).
-    fn schema_for_uri(&self, uri: &Uri) -> Option<Arc<Schema>> {
+    /// The schema a schema-document URI refers to: an open EXPRESS buffer first, then a
+    /// virtual or on-disk schema the server loaded itself.
+    fn schema_for_uri(&mut self, uri: &Uri) -> Option<Arc<Schema>> {
+        if let Some(live) = self.schema_docs.get_mut(uri) {
+            if live.schema.is_none() {
+                let t0 = Instant::now();
+                let src = String::from_utf8_lossy(live.text.bytes());
+                live.schema = Some(Arc::new(Schema::parse(&src)));
+                log::debug!(
+                    "parsed {} in {:.1} ms",
+                    uri.as_str(),
+                    t0.elapsed().as_secs_f64() * 1e3
+                );
+            }
+            return live.schema.clone();
+        }
         let schemas = self.schemas();
         let text = uri.as_str();
         if let Some(rest) = text.strip_prefix(&format!("{SCHEMA_SCHEME}:")) {
@@ -281,14 +307,23 @@ impl Server {
                 let Ok(p) = serde_json::from_value::<DidOpenTextDocumentParams>(n.params) else {
                     return;
                 };
-                if is_schema_uri(&p.text_document.uri)
-                    || p.text_document.language_id.eq_ignore_ascii_case("express")
+                if is_schema_uri(&p.text_document.uri) {
+                    return;
+                }
+                if p.text_document.language_id.eq_ignore_ascii_case("express")
                     || p.text_document
                         .uri
                         .as_str()
                         .to_ascii_lowercase()
                         .ends_with(".exp")
                 {
+                    self.schema_docs.insert(
+                        p.text_document.uri,
+                        SchemaDoc {
+                            text: TextBuffer::new(p.text_document.text),
+                            schema: None,
+                        },
+                    );
                     return;
                 }
                 let t0 = Instant::now();
@@ -309,6 +344,20 @@ impl Server {
                 let Ok(p) = serde_json::from_value::<DidChangeTextDocumentParams>(n.params) else {
                     return;
                 };
+                if let Some(live) = self.schema_docs.get_mut(&p.text_document.uri) {
+                    for change in p.content_changes {
+                        match change.range {
+                            Some(range) => {
+                                let start = live.text.offset(range.start);
+                                let end = live.text.offset(range.end).max(start);
+                                live.text.splice(start, end, change.text.as_bytes());
+                            }
+                            None => live.text = TextBuffer::new(change.text),
+                        }
+                    }
+                    live.schema = None;
+                    return;
+                }
                 let Some(state) = self.docs.get(&p.text_document.uri).cloned() else {
                     return;
                 };
@@ -349,6 +398,9 @@ impl Server {
                 let Ok(p) = serde_json::from_value::<DidCloseTextDocumentParams>(n.params) else {
                     return;
                 };
+                if self.schema_docs.remove(&p.text_document.uri).is_some() {
+                    return;
+                }
                 let Some(state) = self.docs.remove(&p.text_document.uri) else {
                     return;
                 };
@@ -383,7 +435,7 @@ impl Server {
         let _ = self.sender.send(Message::Response(response));
     }
 
-    fn dispatch(&self, req: Request) -> anyhow::Result<serde_json::Value> {
+    fn dispatch(&mut self, req: Request) -> anyhow::Result<serde_json::Value> {
         match req.method.as_str() {
             lsp_types::request::HoverRequest::METHOD => {
                 let p: HoverParams = serde_json::from_value(req.params)?;
@@ -400,18 +452,28 @@ impl Server {
                 let p: GotoDefinitionParams = serde_json::from_value(req.params)?;
                 let uri = &p.text_document_position_params.text_document.uri;
                 let pos = p.text_document_position_params.position;
-                let location = if let Some(schema) = self.schema_for_uri(uri) {
-                    schema_definition(&schema, uri, pos)
+                let response = if let Some(schema) = self.schema_for_uri(uri) {
+                    schema_definition(&schema, uri, pos).map(GotoDefinitionResponse::Array)
                 } else {
                     self.definition(uri, pos)
+                        .map(GotoDefinitionResponse::Scalar)
                 };
-                Ok(serde_json::to_value(
-                    location.map(GotoDefinitionResponse::Scalar),
-                )?)
+                Ok(serde_json::to_value(response)?)
             }
             lsp_types::request::References::METHOD => {
                 let p: ReferenceParams = serde_json::from_value(req.params)?;
                 Ok(serde_json::to_value(self.references(p))?)
+            }
+            lsp_types::request::FoldingRangeRequest::METHOD => {
+                let p: FoldingRangeParams = serde_json::from_value(req.params)?;
+                let uri = &p.text_document.uri;
+                let ranges: Option<Vec<FoldingRange>> =
+                    if let Some(schema) = self.schema_for_uri(uri) {
+                        Some(folding::express_blocks(&schema))
+                    } else {
+                        self.with_doc(uri, folding::ifc_sections)
+                    };
+                Ok(serde_json::to_value(ranges)?)
             }
             SCHEMA_SOURCE_REQUEST => {
                 let uri_text = req
@@ -550,17 +612,27 @@ fn schema_hover(schema: &Schema, pos: Position) -> Option<Hover> {
     })
 }
 
-fn schema_definition(schema: &Schema, uri: &Uri, pos: Position) -> Option<Location> {
+/// Entity or type name -> its declaration; otherwise an enumeration value -> every
+/// enumeration that declares it.
+fn schema_definition(schema: &Schema, uri: &Uri, pos: Position) -> Option<Vec<Location>> {
     let (word, _) = schema_word(schema, pos)?;
-    let range = if let Some(e) = schema.entity(word) {
-        schema.entity_decl_range(e)
-    } else {
-        schema.type_decl_range(schema.type_id(word)?)
-    };
-    Some(Location {
+    let at = |range| Location {
         uri: uri.clone(),
         range,
-    })
+    };
+    if let Some(e) = schema.entity(word) {
+        return Some(vec![at(schema.entity_decl_range(e))]);
+    }
+    if let Some(t) = schema.type_id(word) {
+        return Some(vec![at(schema.type_decl_range(t))]);
+    }
+    let upper = word.to_ascii_uppercase();
+    let hits: Vec<Location> = schema
+        .enums_with_value(&upper)
+        .into_iter()
+        .map(|t| at(schema.enum_value_range(t, &upper)))
+        .collect();
+    (!hits.is_empty()).then_some(hits)
 }
 
 /// Every `#id` token in the document, as byte spans.
